@@ -18,7 +18,7 @@ def webhook():
     parameters=result.get("parameters")
     objective=parameters.get("objective")
     credit_card_faqs=mongo.db["credit_card_faqs"]
-    credit_card_faqs.create_index(['question','text'])
+    credit_card_faqs.create_index([('question','text')])
     response=credit_card_faqs.find_one({"$text":{"$search":objective}})
     return response['answer']
 
