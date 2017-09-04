@@ -20,7 +20,7 @@ def webhook():
     credit_card_faqs=mongo.db["credit_card_faqs"]
     credit_card_faqs.create_index([('question','text')])
     response=credit_card_faqs.find_one({"$text":{"$search":objective[0]}})
-    res={displayText:response['answer']}
+    res={'displayText':response['answer']}
     res=json.dumps(res,indent=4)
     r=make_response(res)
     r.headers['Content-Type'] = 'application/json'
