@@ -13,7 +13,7 @@ mongo=PyMongo(app)
 def webhook():
     req=request.get_json(silent=True,force=True)
     print('Request:',json.dumps(req,indent=4))
-    context=req.get("contexts").get("name")
+    #context=req.get("contexts").get("name")
     result=req.get("result")
     parameters=result.get("parameters")
     objective=parameters.get("objective")
