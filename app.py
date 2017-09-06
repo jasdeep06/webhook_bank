@@ -22,6 +22,8 @@ def webhook():
     query=""
     for key,value in parameters.items():
         query=query+" "+value
+    
+    query=query.lower()
     #objective=parameters.get("objective")
     credit_card_faqs=mongo.db["credit_card_faqs"]
     #credit_card_faqs.create_index([('question','text')])
