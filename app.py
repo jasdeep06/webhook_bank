@@ -2,6 +2,7 @@ from flask import Flask
 from flask_pymongo import PyMongo
 from flask import request
 from flask import make_response
+from search import tf_idf_score
 
 import json
 import os
@@ -18,15 +19,24 @@ def webhook():
     #context=req.get("contexts").get("name")
     result=req.get("result")
     parameters=result.get("parameters")
+    query=""
+    for key,value in parameters.items():
+        query=query+" "+value
     objective=parameters.get("objective")
     credit_card_faqs=mongo.db["credit_card_faqs"]
-    credit_card_faqs.create_index([('question','text')])
-    response=credit_card_faqs.find_one({"$text":{"$search":objective[0]}})
-    print(response["answer"])
+    #credit_card_faqs.create_index([('question','text')])
+    #response=credit_card_faqs.find_one({"$text":{"$search":objective[0]}})
+    documents=[]
+    for faq in credit_card_faqs.find():
+        documents.append(faq["answer"])
+        
+    #print(response["answer"])
+    response=tf_idf_score(query,documents)
+    print(response)
     
     res={
-        "speech": response['answer'],
-        "displayText": response['answer'],
+        "speech": response,
+        "displayText": response,
         # "data": data,
         # "contextOut": [],
         "source": "bank_webhook"
