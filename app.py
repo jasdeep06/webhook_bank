@@ -22,7 +22,7 @@ def webhook():
     query=""
     for key,value in parameters.items():
         query=query+" "+value
-    objective=parameters.get("objective")
+    #objective=parameters.get("objective")
     credit_card_faqs=mongo.db["credit_card_faqs"]
     #credit_card_faqs.create_index([('question','text')])
     #response=credit_card_faqs.find_one({"$text":{"$search":objective[0]}})
