@@ -6,7 +6,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 from stop_words import get_stop_words
 import string
-
+from textblob import Word
 import json
 import os
 
@@ -57,18 +57,13 @@ def webhook():
     query = ""
     for key, value in parameters.items():
         query = query + " " + value
-
+    #query to lowercase
     query = query.lower()
-    query = query.translate({ord(c): None for c in string.punctuation})
-    tokenized_query = query.split()
-    stop_words = get_stop_words("en")
-    for i in range(len(stop_words)):
-        stop_words[i] = stop_words[i].translate({ord(c): None for c in string.punctuation})
-        if stop_words[i] in tokenized_query:
-            # query=query.replace(stop_words[i],"")
-            tokenized_query.remove(stop_words[i])
 
-    final_query = " ".join(tokenized_query)
+    #remove punctuation and stop words
+    query=remove_punctuation_and_stop_words(query)
+    #spell check query
+    final_query=spell_check(query)
     print(final_query)
     result = es.search(index=INDEX_NAME, doc_type=TYPE, body={"query": {"match": {"text": final_query.strip()}}})
 
@@ -94,6 +89,66 @@ def webhook():
     r = make_response(res)
     r.headers['Content-Type'] = 'application/json'
     return r
+
+def spell_check(query):
+    #split query
+    splitted_query=query.split()
+    #empty list for spell checked query
+    corrected_query=[]
+    #searching freq_dict in db
+    dict_collection=mongo.db["dict_collection"]
+    freq_dict=dict_collection.find_one({"name":"freq_dict"})["freq_dict"]
+    #for each word in splitted query
+    for word in splitted_query:
+        #convert to testblob word
+        blob_word=Word(word)
+        #all the possible corrections to word
+        possible_corrections=blob_word.spellcheck()
+        #initial counter
+        freq_counter = 1
+        #for the case when spelling is incorrected but no word in document to correct it
+        at_least_one = False
+        #in case the spelling is correct
+        corrected_word = blob_word
+        #for each possible correction in the word
+        for p in possible_corrections:
+            #p[0]'s are the corrections and p[1] scores
+            if p[0] in freq_dict.keys():
+                #signifies at least one correction is present in dictionary so frequency based correction
+                at_least_one = True
+                #frequency of p[0]
+                frequency = freq_dict[p[0]]
+            else:
+                frequency = 0
+            #keeping highest frequency and corresponding word in record
+            if frequency >= freq_counter:
+                freq_counter = frequency
+                corrected_word = p[0]
+        #no correction was present in dictionary
+        if at_least_one is False:
+            #return correction with highest score
+            corrected_word = blob_word.correct()
+        corrected_query.append(corrected_word)
+    return " ".join(corrected_query)
+
+
+def remove_punctuation_and_stop_words(query):
+    #remove punctuations
+    query = query.translate({ord(c): None for c in string.punctuation})
+    #tokenize query
+    tokenized_query = query.split()
+    #get stop words
+    stop_words = get_stop_words("en")
+    #for each stop word
+    for i in range(len(stop_words)):
+        #remove punctuation from it
+        stop_words[i] = stop_words[i].translate({ord(c): None for c in string.punctuation})
+        #remove stop word
+        if stop_words[i] in tokenized_query:
+            # query=query.replace(stop_words[i],"")
+            tokenized_query.remove(stop_words[i])
+    query = " ".join(tokenized_query)
+    return query
 
 
 if __name__ == '__main__':
